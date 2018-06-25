@@ -28,7 +28,7 @@ namespace CrossSolar.Controllers
         public async Task<IActionResult> Get([FromRoute] string panelId)
         {
             var check = await CheckPanelId(panelId);
-            if (check == null)
+            if (check != null)
                 return check;
 
             var analytics = await _analyticsRepository.Query()
