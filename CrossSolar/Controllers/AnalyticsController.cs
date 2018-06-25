@@ -27,10 +27,9 @@ namespace CrossSolar.Controllers
         [HttpGet("{panelId}/[controller]")]
         public async Task<IActionResult> Get([FromRoute] string panelId)
         {
-            var panel = await _panelRepository.Query()
-                .FirstOrDefaultAsync(x => x.Serial.Equals(panelId, StringComparison.CurrentCultureIgnoreCase));
-
-            if (panel == null) return NotFound();
+            var check = await CheckPanelId(panelId);
+            if (check == null)
+                return check;
 
             var analytics = await _analyticsRepository.Query()
                 .Where(x => x.PanelId.Equals(panelId, StringComparison.CurrentCultureIgnoreCase)).ToListAsync();
@@ -48,6 +47,13 @@ namespace CrossSolar.Controllers
             return Ok(result);
         }
 
+        private async Task<IActionResult> CheckPanelId(string panelId)
+        {
+            return await _panelRepository.Query()
+                .FirstOrDefaultAsync(x => x.Serial.Equals(panelId, StringComparison.CurrentCultureIgnoreCase)) == null
+                ? NotFound() : null;
+        }
+
         // GET panel/XXXX1111YYYY2222/analytics/day
         [HttpGet("{panelId}/[controller]/day")]
         public async Task<IActionResult> DayResults([FromRoute] string panelId)
@@ -62,6 +68,10 @@ namespace CrossSolar.Controllers
         public async Task<IActionResult> Post([FromRoute] string panelId, [FromBody] OneHourElectricityModel value)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var check = await CheckPanelId(panelId);
+            if (check != null)
+                return check;
 
             var oneHourElectricityContent = new OneHourElectricity
             {

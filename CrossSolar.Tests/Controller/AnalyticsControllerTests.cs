@@ -90,12 +90,11 @@ namespace CrossSolar.Tests.Controller
                 Id = 1,
                 KiloWatt = 2000,
                 DateTime = DateTime.Now
-            };            
-
-            Func<OneHourElectricity, OneHourElectricity> ex = (t) => { return new OneHourElectricity();  };
+            };
 
             _analyticsRepositoryMock.Setup(repo => repo.InsertAsync(It.IsAny<OneHourElectricity>()))
-                .Returns((OneHourElectricity t) => {
+                .Returns((OneHourElectricity t) =>
+                {
                     t.Id = createmodel.Id;
                     t.DateTime = createmodel.DateTime;
                     t.KiloWatt = createmodel.KiloWatt;
@@ -114,7 +113,32 @@ namespace CrossSolar.Tests.Controller
             var resultModel = Assert.IsType<OneHourElectricityModel>(createResult.Value);
             Assert.Equal(createmodel.Id, resultModel.Id);
             Assert.Equal(createmodel.KiloWatt, resultModel.KiloWatt);
-            Assert.Equal(createmodel.DateTime, resultModel.DateTime);            
+            Assert.Equal(createmodel.DateTime, resultModel.DateTime);
+        }
+
+
+        [Fact]
+        public async Task Post_ShouldSaveToRegisteredPanel()
+        {
+            //Setup Analytics Repository
+            var invalidId = "1234576890qpowke";
+            var createmodel = new OneHourElectricityModel()
+            {
+                Id = 1,
+                KiloWatt = 2000,
+                DateTime = DateTime.Now
+            };
+
+            _analyticsRepositoryMock.Setup(repo => repo.InsertAsync(It.IsAny<OneHourElectricity>()))
+                .Returns(Task.FromResult(1));
+
+            _anaController = new AnalyticsController(_analyticsRepositoryMock.Object, _panelRepositoryMock.Object);
+
+            //Act
+            var result = await _anaController.Post(invalidId, createmodel);
+
+            //Asserts
+            var createResult = Assert.IsType<NotFoundResult>(result);
         }
     }
 }
