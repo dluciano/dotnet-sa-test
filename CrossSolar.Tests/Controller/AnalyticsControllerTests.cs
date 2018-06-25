@@ -116,6 +116,71 @@ namespace CrossSolar.Tests.Controller
             Assert.Equal(createmodel.DateTime, resultModel.DateTime);
         }
 
+        [Fact]
+        public async Task DayResults_ShouldRetrieveSumMixMaxAvg()
+        {
+            //Setup Analytics Repository
+            var day1 = DateTime.Now;
+            var day2 = day1.AddDays(1);
+
+            var e1_100KW_day1_hour1 = new OneHourElectricity()
+            {
+                Id = 1,
+                KiloWatt = 100,
+                DateTime = day1,
+                PanelId = this.panelId,
+            };
+
+            var e1_150KW_day1_hour2 = new OneHourElectricity()
+            {
+                Id = 2,
+                KiloWatt = 150,
+                DateTime = day1.AddHours(1),
+                PanelId = this.panelId,
+            };
+
+            var e1_200KW_day2_hour1 = new OneHourElectricity()
+            {
+                Id = 3,
+                KiloWatt = 200,
+                DateTime = day2,
+                PanelId = this.panelId,
+            };
+
+            var e1_250KW_day2_hour2 = new OneHourElectricity()
+            {
+                Id = 4,
+                KiloWatt = 250,
+                DateTime = day2.AddHours(1),
+                PanelId = this.panelId,
+            };
+
+            var analytics = new List<OneHourElectricity>() {
+                e1_100KW_day1_hour1, e1_150KW_day1_hour2, e1_200KW_day2_hour1, e1_250KW_day2_hour2
+            };
+
+            _analyticsRepositoryMock.Setup(repo => repo.Query())
+                .Returns(analytics.AsQueryable().BuildMock().Object);
+
+            _anaController = new AnalyticsController(_analyticsRepositoryMock.Object, _panelRepositoryMock.Object);
+
+            //Act
+            var result = await _anaController.DayResults(panelId);
+
+            //Asserts
+            var okResult = Assert.IsType<OkObjectResult>(result);
+            var resultModel = Assert.IsType<List<OneDayElectricityModel>>(okResult.Value);
+            Assert.Equal(2, resultModel.Count);
+
+            var firstDay = resultModel.FirstOrDefault();//Check for the first day values
+            Assert.NotNull(firstDay);
+
+            Assert.Equal(day1.Date, firstDay.DateTime.Date);
+            Assert.Equal(e1_100KW_day1_hour1.KiloWatt + e1_150KW_day1_hour2.KiloWatt, firstDay.Sum);
+            Assert.Equal((e1_100KW_day1_hour1.KiloWatt + e1_150KW_day1_hour2.KiloWatt) / 2, firstDay.Average);
+            Assert.Equal(e1_150KW_day1_hour2.KiloWatt, firstDay.Maximum);
+            Assert.Equal(e1_100KW_day1_hour1.KiloWatt, firstDay.Minimum);
+        }
 
         [Fact]
         public async Task Post_ShouldSaveToRegisteredPanel()
